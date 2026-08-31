@@ -1,0 +1,18 @@
+{
+  "Clothing": {
+    "Men's Clothing": ["T-Shirts", "Shirts", "Jeans", "Jackets", "Trousers"],
+    "Women's Clothing": ["T-Shirts", "Dresses", "Sarees", "Jeans", "Kurtis"]
+  },
+  "Footwear": {
+    "Footwear": ["Running Shoes", "Sports Shoes", "Casual Shoes", "Sandals", "Slippers"]
+  },
+  "Electronics": {
+    "Electronics": ["Mobile Phones", "Earphones", "Headphones", "Chargers", "Smart Watches"]
+  },
+  "Accessories": {
+    "Accessories": ["Wallets", "Belts", "Handbags", "Backpacks"]
+  },
+  "Home & Kitchen": {
+    "Home & Kitchen": ["Cookware", "Bottles", "Storage Containers", "Kitchen Appliances", "Home Decor"]
+  }
+}
