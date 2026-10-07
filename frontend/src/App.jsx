@@ -87,7 +87,8 @@ export default function App() {
       { id: 3, label: "Attribute Extraction", status: "pending" },
       { id: 4, label: "Vernacular Normalization", status: "pending" },
       { id: 5, label: "Taxonomy Path Mapping", status: "pending" },
-      { id: 6, label: "ONDC Schema Compile", status: "pending" },
+      { id: 6, label: "Product Resolution", status: "pending" },
+      { id: 7, label: "ONDC Schema Compile", status: "pending" },
     ]);
     
     // Simulate pipeline execution step-by-step
@@ -314,6 +315,38 @@ export default function App() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="text-sm font-semibold text-slate-500">Existing Product Match Rate</div>
+                  <div className="text-3xl font-extrabold text-indigo-600 mt-2">
+                    {analytics ? analytics.existing_product_match_rate : 0}%
+                  </div>
+                  <div className="text-xs text-slate-400 mt-2">
+                    {analytics?.total_products ? "Existing product matches / processed catalogs" : "No data yet"}
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="text-sm font-semibold text-slate-500">Variant Validation Success Rate</div>
+                  <div className="text-3xl font-extrabold text-emerald-600 mt-2">
+                    {analytics ? analytics.variant_validation_success_rate : 0}%
+                  </div>
+                  <div className="text-xs text-slate-400 mt-2">
+                    {analytics?.variant_validation_count
+                      ? `Valid variants / ${analytics.variant_validation_count} checks`
+                      : "No variants validated yet"}
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="text-sm font-semibold text-slate-500">New Product Rate</div>
+                  <div className="text-3xl font-extrabold text-orange-500 mt-2">
+                    {analytics ? analytics.new_product_rate : 0}%
+                  </div>
+                  <div className="text-xs text-slate-400 mt-2">
+                    {analytics?.total_products ? "New products / processed catalogs" : "No data yet"}
+                  </div>
+                </div>
+              </div>
+
               {/* Dist Graphs Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Language distribution card */}
@@ -510,7 +543,7 @@ export default function App() {
                   <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                     <Activity className="h-4 w-4 text-orange-500 animate-pulse" /> SLM Cataloging Pipelines
                   </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
                     {processingSteps.map((step) => (
                       <div key={step.id} className="p-3 border border-slate-100 rounded-xl bg-slate-50 flex flex-col justify-between h-20">
                         <span className="text-[10px] font-bold text-slate-400 uppercase">Step {step.id}</span>
@@ -556,6 +589,69 @@ export default function App() {
                         <div>Processing Time</div>
                         <div className="font-bold text-slate-800 text-sm mt-0.5">{generatedCatalog.processing_time_ms} ms</div>
                       </div>
+                    </div>
+
+                    <div className={`rounded-xl border p-4 ${generatedCatalog.existing_product ? "border-emerald-200 bg-emerald-50/60" : "border-indigo-200 bg-indigo-50/60"}`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Product Match</div>
+                          <div className="font-bold text-slate-800 mt-1">
+                            {generatedCatalog.existing_product ? "Existing Product" : "New product detected"}
+                          </div>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${generatedCatalog.existing_product ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700"}`}>
+                          {generatedCatalog.existing_product ? "Matched" : "New"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-4 text-sm">
+                        <div><div className="text-xs text-slate-500">Product</div><div className="font-semibold text-slate-800">{generatedCatalog.product_name}</div></div>
+                        <div><div className="text-xs text-slate-500">Brand</div><div className="font-semibold text-slate-800">{generatedCatalog.brand || "Not detected"}</div></div>
+                        <div><div className="text-xs text-slate-500">Category</div><div className="font-semibold text-slate-800">{generatedCatalog.category}</div></div>
+                        <div><div className="text-xs text-slate-500">Subcategory</div><div className="font-semibold text-slate-800">{generatedCatalog.subcategory}</div></div>
+                      </div>
+                      <div className="mt-4 border-t border-slate-200/70 pt-3">
+                        <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Detected Attributes</div>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {Object.entries(generatedCatalog.requested_variant || {}).length > 0 ? (
+                            Object.entries(generatedCatalog.requested_variant).map(([key, value]) => (
+                              <span key={key} className="rounded-md bg-white px-2.5 py-1 text-xs text-slate-700 border border-slate-200">
+                                <span className="font-semibold capitalize">{key}:</span> {value}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-slate-500">No variant attributes detected</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 mt-4 text-xs">
+                        <div>
+                          <div className="text-slate-500">Variant</div>
+                          <div className={`font-bold mt-1 ${generatedCatalog.variant_match === true ? "text-emerald-700" : generatedCatalog.variant_match === false ? "text-red-700" : "text-slate-600"}`}>
+                            {generatedCatalog.variant_match === true
+                              ? "✓ Valid existing variant"
+                              : generatedCatalog.variant_match === false
+                                ? "Invalid / unavailable variant"
+                                : generatedCatalog.existing_product ? "No variant requested" : "Pending product approval"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-slate-500">Model Confidence</div>
+                          <div className="font-bold text-slate-800 mt-1">{(generatedCatalog.confidence.overall * 100).toFixed(1)}%</div>
+                        </div>
+                      </div>
+                      {generatedCatalog.variant_match === true && generatedCatalog.matched_variant && (
+                        <div className="text-xs text-emerald-800 mt-2">
+                          Matched: {Object.entries(generatedCatalog.matched_variant).map(([key, value]) => `${key}: ${value}`).join(" / ")}
+                        </div>
+                      )}
+                      {generatedCatalog.resolution_reasons?.length > 0 && (
+                        <ul className="mt-2 list-disc pl-5 text-xs text-red-700">
+                          {generatedCatalog.resolution_reasons.map(reason => <li key={reason}>{reason}</li>)}
+                        </ul>
+                      )}
+                      {!generatedCatalog.existing_product && (
+                        <p className="text-xs text-indigo-700 mt-3">Review the Catalog-SLM output and approve it to add this product to the knowledge base.</p>
+                      )}
                     </div>
 
                     {/* Form Block */}
@@ -768,6 +864,8 @@ export default function App() {
                       <th className="px-4 py-3 font-semibold">Category</th>
                       <th className="px-4 py-3 font-semibold">Detected Language</th>
                       <th className="px-4 py-3 font-semibold">Confidence</th>
+                      <th className="px-4 py-3 font-semibold">Resolution</th>
+                      <th className="px-4 py-3 font-semibold">Variant</th>
                       <th className="px-4 py-3 font-semibold">Status</th>
                       <th className="px-4 py-3 font-semibold">Date</th>
                       <th className="px-4 py-3 font-semibold text-right">Actions</th>
@@ -784,8 +882,23 @@ export default function App() {
                         <td className="px-4 py-3.5 font-medium">{item.detected_language}</td>
                         <td className="px-4 py-3.5 font-mono text-slate-800">{(item.confidence.overall * 100).toFixed(1)}%</td>
                         <td className="px-4 py-3.5">
+                          <div className="font-semibold">{item.existing_product ? "Existing Product" : "New Product"}</div>
+                          <div className="text-[10px] text-slate-400">{item.matched_product_id || "No product ID"}</div>
+                          <div className="text-[10px] text-slate-500">
+                            Resolution confidence: {((item.product_resolution_confidence || 0) * 100).toFixed(1)}%
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          {item.variant_match === true ? "Valid" : item.variant_match === false ? "Invalid" : "Not checked"}
+                          {item.matched_variant && (
+                            <div className="text-[10px] text-slate-400">
+                              {Object.values(item.matched_variant).join(" / ")}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5">
                           <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${item.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' : item.status === 'Needs Review' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
-                            {item.status}
+                            {item.seller_decision || item.status}
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-xs text-slate-400 font-semibold">{item.created_at ? item.created_at.split(' ')[0] : 'N/A'}</td>
@@ -808,7 +921,7 @@ export default function App() {
                     ))}
                     {filteredHistory.length === 0 && (
                       <tr>
-                        <td colSpan="7" className="text-center py-12 text-slate-400 font-semibold">No catalogs found matching the search/filter criteria.</td>
+                        <td colSpan="9" className="text-center py-12 text-slate-400 font-semibold">No catalogs found matching the search/filter criteria.</td>
                       </tr>
                     )}
                   </tbody>

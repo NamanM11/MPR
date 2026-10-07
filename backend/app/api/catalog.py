@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from ..schemas.catalog import ProcessRequest, ApproveRequest
 from ..services.catalog_processor import CatalogProcessor
-from ..database import save_catalog, update_status
+from ..database import get_products, save_catalog, update_status
 import os
 
 router = APIRouter()
@@ -21,6 +21,13 @@ def get_processor():
             
         processor_instance = CatalogProcessor(norm_path, tax_path)
     return processor_instance
+
+@router.get("/products")
+def get_product_knowledge_base():
+    try:
+        return get_products()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/process")
 def process_catalog_endpoint(request: ProcessRequest, processor: CatalogProcessor = Depends(get_processor)):

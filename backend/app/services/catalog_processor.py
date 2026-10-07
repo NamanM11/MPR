@@ -3,11 +3,13 @@ import uuid
 import os
 from ..ml.model_loader import get_model
 from .normalization import Normalizer
+from .product_resolution import ProductResolver
 from .taxonomy_mapper import TaxonomyMapper
 
 class CatalogProcessor:
     def __init__(self, normalization_path, taxonomy_path):
         self.normalizer = Normalizer(normalization_path)
+        self.product_resolver = ProductResolver(self.normalizer)
         self.taxonomy_mapper = TaxonomyMapper(taxonomy_path)
         
     def process_text(self, text, language_override="auto"):
@@ -84,10 +86,19 @@ class CatalogProcessor:
             extracted_attributes[field] = canon_val
             confidence_scores[field] = round(ml_conf, 3)
             
+        # Retrieve trusted product details before compiling the final catalog.
+        resolution = self.product_resolver.resolve(text)
+        product = resolution["product_metadata"]
+        if product:
+            extracted_attributes = dict(product["attributes"])
+            if product["brand"]:
+                extracted_attributes["brand"] = product["brand"]
+            extracted_attributes.update(resolution["requested_variant"])
+
         # Run Taxonomy mapping
         taxonomy_info = self.taxonomy_mapper.map_to_path(
-            extracted_attributes.get("category"),  # from subcat lookup
-            extracted_attributes.get("product_type"),
+            product["category"] if product else None,
+            product["subcategory"] if product else extracted_attributes.get("product_type"),
             extracted_attributes.get("gender")
         )
         
@@ -99,17 +110,20 @@ class CatalogProcessor:
         material = extracted_attributes.get("material")
         pt = extracted_attributes.get("product_type") or "Product"
         
-        if brand:
-            name_parts.append(brand)
-        if gender:
-            name_parts.append(gender + "'s" if gender in ["Men", "Women"] else gender)
-        if color:
-            name_parts.append(color)
-        if material:
-            name_parts.append(material)
-            
-        name_parts.append(pt)
-        product_name = " ".join(name_parts)
+        if product:
+            product_name = product["product_name"]
+        else:
+            if brand:
+                name_parts.append(brand)
+            if gender:
+                name_parts.append(gender + "'s" if gender in ["Men", "Women"] else gender)
+            if color:
+                name_parts.append(color)
+            if material:
+                name_parts.append(material)
+
+            name_parts.append(pt)
+            product_name = " ".join(name_parts)
         
         # Calculate overall confidence
         confidence_scores["overall"] = round(float(np.mean(list(confidence_scores.values()))), 3)
@@ -123,7 +137,7 @@ class CatalogProcessor:
             
         catalog_id = str(uuid.uuid4())
         
-        return {
+        catalog = {
             "catalog_id": catalog_id,
             "original_text": text,
             "detected_language": detected_lang,
@@ -136,6 +150,16 @@ class CatalogProcessor:
             "processing_time_ms": processing_time,
             "status": status
         }
+
+        catalog.update({
+            key: value
+            for key, value in resolution.items()
+            if key != "product_metadata"
+        })
+        catalog["brand"] = product["brand"] if product else extracted_attributes.get("brand")
+        catalog["product_metadata"] = product
+
+        return catalog
 
 # Dummy numpy mean fallback if numpy is not loaded yet
 import numpy as np

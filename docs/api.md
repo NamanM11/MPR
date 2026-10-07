@@ -15,6 +15,13 @@ The FastAPI backend runs on port 8000 and serves as the REST service layer.
 }
 ```
 * **Response Body**:
+The response retains the existing structured catalog fields and adds product-resolution fields:
+`existing_product`, `matched_product_id`, `product_match`, `variant_match`,
+`product_resolution_confidence`, `resolution_method`, `matched_variant`,
+`requested_variant`, and `resolution_reasons`. Existing-product responses also include trusted
+`product_metadata`; for new products those metadata fields are `null` and the existing SLM output
+remains available for seller review.
+
 ```json
 {
   "catalog_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
@@ -48,7 +55,14 @@ The FastAPI backend runs on port 8000 and serves as the REST service layer.
 }
 ```
 
-### 2. Approve Catalog
+### 2. Product Knowledge Base
+* **URL**: `/api/catalog/products`
+* **Method**: `GET`
+* **Response Body**: Products with trusted metadata and their valid variants.
+
+Products approved from the existing Generate Catalog workflow are added to this knowledge base.
+
+### 3. Approve Catalog
 * **URL**: `/api/catalog/{catalog_id}/approve`
 * **Method**: `POST`
 * **Request Body**:
@@ -76,23 +90,34 @@ The FastAPI backend runs on port 8000 and serves as the REST service layer.
 }
 ```
 
-### 3. Get Catalog History
+### 4. Get Catalog History
 * **URL**: `/api/catalog/history`
 * **Method**: `GET`
 * **Response Body**: List of saved catalogs in the database (including status, name, category, and timestamps).
 
-### 4. Browse Taxonomy
+### 5. Browse Taxonomy
 * **URL**: `/api/taxonomy`
 * **Method**: `GET`
 * **Response Body**: Configured category mapping tree.
 
-### 5. Fetch Analytics
+### 6. Fetch Analytics
 * **URL**: `/api/analytics`
 * **Method**: `GET`
 * **Response Body**: Aggregated catalog performance stats.
+The analytics response includes `existing_product_match_rate`, `variant_validation_success_rate`,
+`new_product_rate`, and `variant_validation_count`, calculated from catalog records.
 
-### 6. Health & Evaluation
+### 7. Health & Evaluation
 * **URL**: `/api/health`
 * **Method**: `GET`
 * **URL**: `/api/evaluation/metrics`
 * **Method**: `GET`
+
+## SQLite migration
+
+This repository uses SQLite, not Supabase. Apply
+[`001_product_knowledge_resolution.sql`](../backend/migrations/001_product_knowledge_resolution.sql)
+once to the SQLite file selected by `DATABASE_URL` (or the working-directory
+`catalog_history.db` default) before starting the updated backend. The migration adds the product
+knowledge table, catalog-resolution history columns, and an example iPhone 15 product with its
+valid variants. It is an explicit database migration; application startup does not alter schemas.

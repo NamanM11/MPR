@@ -27,11 +27,14 @@ graph TD
     
     OutputGen -->|7. Persist Record| SQLite[(SQLite Database)]
     OutputGen -->|8. Standardized JSON| ReactApp
+    Processor -->|Retrieve known product & validate variants| ProductResolver[Product Knowledge Resolver]
+    ProductResolver -->|Trusted metadata / match result| OutputGen
+    ProductResolver --> ProductStore[(SQLite Product Knowledge)]
     
     ReactApp -->|9. Manual Edit & Approval| ApproveEndpoint[FastAPI Approve Endpoint]
     ApproveEndpoint -->|10. Update Status| SQLite
     
-    SQLite -->|Compile Stats| Analytics[Analytics Service]
+    SQLite -->|Catalog history and resolution metrics| Analytics[Analytics Service]
     Analytics -->|HTTP GET Response| ReactApp
 ```
 
@@ -46,7 +49,8 @@ graph TD
 
 2. **Inference & Service Layer (FastAPI)**:
    - Orchestrates requests, manages database state, and serves taxonomy configurations.
-   - Houses the `CatalogProcessor` which encapsulates tokenizer, model execution, normalization synonynms, and category path mapping.
+   - Houses the `CatalogProcessor` which encapsulates tokenizer, model execution, normalization synonyms, taxonomy mapping, and existing-product resolution.
 
 3. **Data Layer (SQLite)**:
-   - Lightweight relational database to persist the catalogs, processing times, confidence logs, and approval metadata.
+   - Lightweight relational database to persist catalogs, resolution outcomes, processing times, confidence logs, and seller decisions.
+   - A product knowledge table stores trusted product metadata and valid variants. The catalog processor retrieves this data before finalizing catalog details; approved new products can be added to the same table.
